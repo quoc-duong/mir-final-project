@@ -4,6 +4,8 @@ import pandas as pd
 import argparse
 import getch
 import signal
+import json
+from tqdm import tqdm
 
 
 def parse_args():
@@ -12,11 +14,47 @@ def parse_args():
     parser.add_argument('dir_path',
                         type=str,
                         help='Path to directory containing Musescore files')
+    parser.add_argument('--metadata',
+                        default='score.jsonl',
+                        type=str,
+                        help='Path to metadata file')
     parser.add_argument('--csv_path',
                         default='score_annotation.csv',
                         type=str,
                         help='Path to output CSV file')
     return parser.parse_args()
+
+
+def filter_piano(filenames, metadata):
+    lookup = {}
+
+    with open(metadata) as f:
+        # Parse each line in the file
+        for line in tqdm(f):
+            # Parse the JSON in the line
+            data = json.loads(line)
+            # Add the JSON object to the lookup table using the authorUserId as the key
+            try:
+                lookup[data["id"]] = data
+            except KeyError:
+                pass
+
+    piano_only = []
+    with_piano = []
+    # Iterate over the filenames
+    for filename in tqdm(filenames):
+        # Extract the ID from the filename
+        file_id = os.path.splitext(os.path.basename(filename))[0]
+        # Look up the corresponding JSON object in the lookup table using the ID as the key
+        if file_id in lookup:
+            # Check if the instrumentsNames field contains "Piano"
+            if ["Piano"] == lookup[file_id]["instrumentsNames"]:
+                piano_only.append(filename)
+            elif "Piano" in lookup[file_id]["instrumentsNames"]:
+                with_piano.append(filename)
+    print(
+        f'Got {len(piano_only)} piano-only scores and {len(with_piano)} scores that contain piano')
+    return piano_only, with_piano
 
 
 def get_mscz_paths(dir_path):
@@ -65,7 +103,9 @@ def annotate_scores(file_list):
 def main():
     args = parse_args()
     file_list = get_mscz_paths(args.dir_path)
-    annotations_df = annotate_scores(file_list)
+    piano_only_scores, with_piano_scores = filter_piano(
+        file_list, args.metadata)
+    annotations_df = annotate_scores(piano_only_scores)
 
     # Save annotations to CSV file
     annotations_df.to_csv(args.csv_path, index=True)
