@@ -6,7 +6,7 @@ import getch
 import signal
 
 
-def main():
+def parse_args():
     # Set up argparse
     parser = argparse.ArgumentParser(description='Annotate Musescore files')
     parser.add_argument('dir_path',
@@ -16,9 +16,12 @@ def main():
                         default='score_annotation.csv',
                         type=str,
                         help='Path to output CSV file')
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def get_mscz_paths(dir_path):
     # Get list of all subdirectories in directory
-    subdir_list = [f.path for f in os.scandir(args.dir_path) if f.is_dir()]
+    subdir_list = [f.path for f in os.scandir(dir_path) if f.is_dir()]
 
     # Iterate through subdirectories and get list of .mscz files in each
     file_list = []
@@ -26,7 +29,10 @@ def main():
         subdir_files = [os.path.join(subdir, f) for f in os.listdir(
             subdir) if f.endswith('.mscz')]
         file_list += subdir_files
+    return file_list
 
+
+def annotate_scores(file_list):
     # Create empty pandas DataFrame to store annotations
     annotations_df = pd.DataFrame(columns=['filename', 'quality'])
     annotations_df = annotations_df.set_index('filename')
@@ -53,6 +59,13 @@ def main():
         elif annotation == 'q':
             print("Stopping program early and saving csv")
             break
+    return annotations_df
+
+
+def main():
+    args = parse_args()
+    file_list = get_mscz_paths(args.dir_path)
+    annotations_df = annotate_scores(file_list)
 
     # Save annotations to CSV file
     annotations_df.to_csv(args.csv_path, index=True)
