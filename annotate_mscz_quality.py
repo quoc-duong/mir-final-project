@@ -90,11 +90,11 @@ def annotate_scores(file_list):
             ['musescore.mscore', filename],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        print(f"Enter annotation for {filename} (g = good, b = bad):")
+        print(f"Enter annotation for {filename} (g = good, b = bad, n = idk):")
 
         # Prompt user to input annotation
         annotation = None
-        while annotation not in ['g', 'b', 'q']:
+        while annotation not in ['g', 'b', 'n', 'q']:
             annotation = getch.getch()
         print(f"Annotation for {filename}: {annotation}")
 
@@ -103,6 +103,8 @@ def annotate_scores(file_list):
             annotations_df.loc[filename] = {'quality': True}
         elif annotation == 'b':
             annotations_df.loc[filename] = {'quality': False}
+        elif annotation == 'n':
+            annotations_df.loc[filename] = {'quality': None}
         elif annotation == 'q':
             print("Stopping program early and saving csv")
             break
@@ -181,7 +183,7 @@ def get_musicxml_paths(file_list):
     for file in file_list:
         musicxml_file = os.path.splitext(file)[0] + '.musicxml'
         if os.path.exists(musicxml_file):
-            musicxml_paths.append(musicxml_fimusle)
+            musicxml_paths.append(musicxml_file)
             count += 1
 
     print(f'Total number of files with corresponding musicxml: {count}')
@@ -192,15 +194,22 @@ def filter_empty(scores):
     musicxml_paths = get_musicxml_paths(scores)
     filtered_paths = []
     for musicxml in tqdm(musicxml_paths):
-        score = music21.converter.parse(musicxml)
-        staves = score.parts[0].getElementsByClass(music21.stream.Voice)
+        try:
+            score = music21.converter.parse(musicxml)
+        except music21.Music21Exception:
+            continue
+        except Exception:
+            continue
+        if len(score.parts) < 2:
+            continue
+        rh = score.parts[0].getElementsByClass(music21.stream.Measure)
+        lh = score.parts[1].getElementsByClass(music21.stream.Measure)
 
-        for staff in staves:
-            if len(staff.notesAndRests) == 0:
-                print("The staff is empty")
-            else:
-                filtered_paths.append(musicxml)
-                break
+        if len(rh) == 0 or len(lh) == 0:
+            print("The staff is empty")
+            print(musicxml)
+        else:
+            filtered_paths.append(musicxml)
     return filtered_paths
 
 
@@ -225,8 +234,16 @@ def main():
     if args.convert:
         mscz2musicxml(piano_only_scores)
 
-    count_musicxml(piano_only_scores)
-    filtered_musicxml_paths = filter_empty(piano_only_scores)
+    filtered_musicxml_paths = None
+    if not os.path.exists('filtered.pkl'):
+        filtered_musicxml_paths = filter_empty(piano_only_scores)
+        count_musicxml(filtered_musicxml_paths)
+        with open('filtered.pkl', 'wb') as f:
+            pickle.dump(filtered_musicxml_paths, f)
+    else:
+        with open('filtered.pkl', 'rb') as f:
+            filtered_musicxml_paths = pickle.load(f)
+
     annotations_df = annotate_scores(filtered_musicxml_paths)
 
     # Save annotations to CSV file
