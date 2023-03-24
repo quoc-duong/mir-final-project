@@ -33,41 +33,40 @@ def compute_complexity(score):
 
 
 def get_pitch_hist_single(material, countGraceNotes=True):
-
-    df = pd.DataFrame(columns=['F#3', 'G#3', 'A3', 'A#3', 'B3', 'C#4',
-                      'C##4', 'D#4', 'E4', 'F#4', 'G#4', 'A4', 'A#4', 'B4', 'C#5', 'D#5', 'E5', 'F#5', 'G#5', 'A5', 'A#5', 'B5', 'C#6'])
-
+    df = pd.DataFrame()
     for score in tqdm(material):
         loadedScore = converter.parse(score)
+        measures_rh = loadedScore.parts[0]
+        measures_lh = loadedScore.parts[1]
+        lr = [Part(measures_lh), Part(measures_rh)]
 
-        rh = loadedScore.parts[0]
-        lh = loadedScore.parts[1]
-        parts = [lh, rh]
-        # Work with each part
-        for part in parts:
-            # Get the notes from the current part
-            notes = part.flat.notes.stream()
-            print(notes)
-
-            # Set the duration of grace notes if needed
-            if countGraceNotes:
-                minDur = 0.25
-                for n in notes:
-                    noteDur = n.quarterLength
-                    if noteDur != 0 and noteDur < minDur:
-                        minDur = noteDur
-
-            df.loc[score] = [0] * len(df.columns)
-            # Count pitches in the current segment
-            for n in notes:
-                noteName = n.nameWithOctave
-                noteDur = n.quarterLength
-                if noteDur == 0:
-                    if not countGraceNotes:
-                        continue
-                if noteName not in df.columns:
-                    df = df.assign(noteName=0)
-                df.at[score, noteName] += noteDur
+        for voice in lr:
+            for e in voice.flat.notes.stream():
+                if not df.empty and score not in df.index:
+                    df.loc[score] = [0] * len(df.columns)
+                if e.isChord:
+                    for n in e.notes:
+                        noteName = n.nameWithOctave
+                        noteDur = n.quarterLength
+                        if noteDur == 0:
+                            if not countGraceNotes:
+                                continue
+                        if noteName not in df:
+                            df[noteName] = 0
+                        if score not in df.index:
+                            df.loc[score] = 0
+                        df.at[score, noteName] += noteDur
+                else:
+                    noteName = e.nameWithOctave
+                    noteDur = e.quarterLength
+                    if noteDur == 0:
+                        if not countGraceNotes:
+                            continue
+                    if noteName not in df:
+                        df[noteName] = 0
+                    if score not in df.index:
+                        df.loc[score] = 0
+                    df.at[score, noteName] += noteDur
 
     return df
 
@@ -97,7 +96,8 @@ def main():
 
     df_mozart_pitch = get_pitch_hist_single(filtered_musicxml_mozart)
     df_beethoven_pitch = get_pitch_hist_single(filtered_musicxml_beethoven)
-    print(df_mozart_pitch)
+    df_mozart_pitch.to_csv('pitch_mozart.csv', index=True)
+    df_beethoven_pitch.to_csv('pitch_beethoven.csv', index=True)
 
     #df_mozart.to_csv('mozart.csv', index=True)
     #df_beethoven.to_csv('beethoven.csv', index=True)
