@@ -8,6 +8,7 @@ import json
 from tqdm import tqdm
 import pickle
 import re
+import music21
 
 
 def parse_args():
@@ -24,6 +25,12 @@ def parse_args():
                         default='score_annotation.csv',
                         type=str,
                         help='Path to output CSV file')
+    parser.add_argument('--process',
+                        action='store_true',
+                        help='Retrieve piano only scores and store in a pickle file (piano_only.pkl)')
+    parser.add_argument('--convert',
+                        action='store_true',
+                        help='Convert mscz files to musicxml')
     return parser.parse_args()
 
 
@@ -102,7 +109,7 @@ def annotate_scores(file_list):
     return annotations_df
 
 
-def mscz2musicxml(score_list, to_discard):
+def create_convert_batch(score_list, to_discard):
     json_out = []
 
     for filename in tqdm(score_list):
@@ -131,33 +138,22 @@ def count_musicxml(file_list):
         musicxml_file = os.path.splitext(file)[0] + '.musicxml'
         if os.path.exists(musicxml_file):
             count += 1
-            print(f'{file} has a corresponding musicxml file.')
 
     print(f'Total number of files with corresponding musicxml: {count}')
 
 
-def main():
-    args = parse_args()
-    # file_list = get_mscz_paths(args.dir_path)
-    # piano_only_scores, with_piano_scores = filter_piano(
-    #    file_list, args.metadata)
-    # with open('piano_only.pkl', 'wb') as f:
-    #    pickle.dump(piano_only_scores, f)
-
-    # with open('with_piano.pkl', 'wb') as f:
-    #    pickle.dump(with_piano_scores, f)
-
-    # Load the list from the file
-    with open('piano_only.pkl', 'rb') as f:
-        piano_only_scores = pickle.load(f)
-
+def mscz2musicxml(piano_only_scores):
     to_discard = []
     pattern = r"\.\./MuseScore/\d+/\d+\.mscz"
-    json_batch = mscz2musicxml(piano_only_scores, to_discard)
+    json_batch = create_convert_batch(piano_only_scores, to_discard)
+    with open('data.json', 'w') as f:
+        json.dump(json_batch, f)
     while True:
         mscore_process = subprocess.Popen(
-            ['musescore.mscore', '-j', 'data.json'], stderr=subprocess.PIPE)
+            ['musescore.mscore', '-j', 'data.json'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print('Waiting to finish')
         mscore_process.wait()
+        print('Done')
 
         # Get last error line
         err_out = mscore_process.stderr.read().decode()
@@ -170,15 +166,68 @@ def main():
                 to_discard.append(problematic_file)
         # Add file that's problematic to the discard list
         print(to_discard)
-        json_batch = mscz2musicxml(piano_only_scores, to_discard)
+        json_batch = create_convert_batch(piano_only_scores, to_discard)
         if len(json_batch) == 0:
             break
         with open('data.json', 'w') as f:
             json.dump(json_batch, f)
         count_musicxml(piano_only_scores)
+        print(f"Files to process: {len(json_batch)}")
+
+
+def get_musicxml_paths(file_list):
+    count = 0
+    musicxml_paths = []
+    for file in file_list:
+        musicxml_file = os.path.splitext(file)[0] + '.musicxml'
+        if os.path.exists(musicxml_file):
+            musicxml_paths.append(musicxml_fimusle)
+            count += 1
+
+    print(f'Total number of files with corresponding musicxml: {count}')
+    return musicxml_paths
+
+
+def filter_empty(scores):
+    musicxml_paths = get_musicxml_paths(scores)
+    filtered_paths = []
+    for musicxml in tqdm(musicxml_paths):
+        score = music21.converter.parse(musicxml)
+        staves = score.parts[0].getElementsByClass(music21.stream.Voice)
+
+        for staff in staves:
+            if len(staff.notesAndRests) == 0:
+                print("The staff is empty")
+            else:
+                filtered_paths.append(musicxml)
+                break
+    return filtered_paths
+
+
+def main():
+    args = parse_args()
+    if args.process:
+        file_list = get_mscz_paths(args.dir_path)
+        piano_only_scores, with_piano_scores = filter_piano(
+            file_list, args.metadata)
+
+        # Store piano-only and with piano files in pickle files
+        with open('piano_only.pkl', 'wb') as f:
+            pickle.dump(piano_only_scores, f)
+
+        with open('with_piano.pkl', 'wb') as f:
+            pickle.dump(with_piano_scores, f)
+
+    # Load the list from the file
+    with open('piano_only.pkl', 'rb') as f:
+        piano_only_scores = pickle.load(f)
+
+    if args.convert:
+        mscz2musicxml(piano_only_scores)
+
     count_musicxml(piano_only_scores)
-    exit(0)
-    annotations_df = annotate_scores(piano_only_scores)
+    filtered_musicxml_paths = filter_empty(piano_only_scores)
+    annotations_df = annotate_scores(filtered_musicxml_paths)
 
     # Save annotations to CSV file
     annotations_df.to_csv(args.csv_path, index=True)
