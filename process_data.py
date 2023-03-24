@@ -196,22 +196,21 @@ def main():
         with open('beethoven.pkl', 'wb') as f:
             pickle.dump(beethoven, f)
 
-    with open('mozart.pkl', 'rb') as f:
-        mozart = pickle.load(f)
-    with open('beethoven.pkl', 'rb') as f:
-        beethoven = pickle.load(f)
-
     if args.convert:
-        #mscz2musicxml(mozart, 'mozart.json')
+        with open('mozart.pkl', 'rb') as f:
+            mozart = pickle.load(f)
+        with open('beethoven.pkl', 'rb') as f:
+            beethoven = pickle.load(f)
+        mscz2musicxml(mozart, 'mozart.json')
         mscz2musicxml(beethoven, 'beethoven.json')
 
     filtered_musicxml_mozart = create_filtered_pickle(
-        'filtered_mozart', mozart)
+        'filtered_mozart.pkl', mozart)
     filtered_musicxml_beethoven = create_filtered_pickle(
-        'filtered_beethoven', beethoven)
+        'filtered_beethoven.pkl', beethoven)
 
-    print(f"There is {filtered_musicxml_mozart} Mozart files")
-    print(f"There is {filtered_musicxml_beethoven} Beethoven files")
+    print(f"There is {len(filtered_musicxml_mozart)} Mozart files")
+    print(f"There is {len(filtered_musicxml_beethoven)} Beethoven files")
 
 
 if __name__ == "__main__":
