@@ -130,3 +130,14 @@ dmypy.json
 
 # MuseScore files
 *.mscz
+
+# MusicXML files
+*.musicxml
+*.mxl
+
+# Joblib files
+*.joblib
+
+# MuseScore json convert batch files
+mozart.json
+beethoven.json
