@@ -83,24 +83,34 @@ def create_complexity_df(score_list):
 
 
 def main():
-    with open('filtered_mozart.pkl', 'rb') as f:
+    with open('./data/filtered_mozart.pkl', 'rb') as f:
         filtered_musicxml_mozart = pickle.load(f)
-    with open('filtered_beethoven.pkl', 'rb') as f:
+    with open('./data/filtered_beethoven.pkl', 'rb') as f:
         filtered_musicxml_beethoven = pickle.load(f)
 
     print(f"There is {len(filtered_musicxml_mozart)} Mozart files")
     print(f"There is {len(filtered_musicxml_beethoven)} Beethoven files")
 
-    #df_mozart_complexity = create_complexity_df(filtered_musicxml_mozart)
-    #df_beethoven_complexity = create_complexity_df(filtered_musicxml_beethoven)
+    df_mozart_complexity = create_complexity_df(filtered_musicxml_mozart)
+    df_beethoven_complexity = create_complexity_df(filtered_musicxml_beethoven)
+    df_mozart_complexity.to_csv('./data/complexity_mozart.csv', index=True)
+    df_beethoven_complexity.to_csv(
+        './data/complexity_beethoven.csv', index=True)
 
     df_mozart_pitch = get_pitch_hist_single(filtered_musicxml_mozart)
     df_beethoven_pitch = get_pitch_hist_single(filtered_musicxml_beethoven)
-    df_mozart_pitch.to_csv('pitch_mozart.csv', index=True)
-    df_beethoven_pitch.to_csv('pitch_beethoven.csv', index=True)
 
-    #df_mozart.to_csv('mozart.csv', index=True)
-    #df_beethoven.to_csv('beethoven.csv', index=True)
+    # Get all columns from both pitch histograms
+    columns = list(set(df_mozart_pitch.columns).union(
+        set(df_beethoven_pitch.columns)))
+
+    # Reindex dataframes with union of columns, filling missing values with 0
+    df_mozart_pitch = df_mozart_pitch.reindex(columns=columns, fill_value=0)
+    df_beethoven_pitch = df_beethoven_pitch.reindex(
+        columns=columns, fill_value=0)
+
+    df_mozart_pitch.to_csv('./data/pitch_mozart.csv', index=True)
+    df_beethoven_pitch.to_csv('data/pitch_beethoven.csv', index=True)
 
 
 if __name__ == '__main__':

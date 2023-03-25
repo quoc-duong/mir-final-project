@@ -25,18 +25,6 @@ def convert_func(x):
 
 
 def load_data(CSVs):
-    # Add missing columns for each pitch csv
-    df_mo = pd.read_csv('data/pitch_mozart.csv', index_col=0)
-    df_be = pd.read_csv('data/pitch_beethoven.csv', index_col=0)
-    columns = list(set(df_mo.columns).union(set(df_be.columns)))
-
-    # Reindex dataframes with union of columns, filling missing values with 0
-    df_mo = df_mo.reindex(columns=columns, fill_value=0)
-    df_be = df_be.reindex(columns=columns, fill_value=0)
-
-    df_mo.to_csv('data/pitch_mozart.csv', index=True)
-    df_be.to_csv('data/pitch_beethoven.csv', index=True)
-
     X = []
     y = []
 
@@ -86,10 +74,6 @@ def train(X_train, y_train, model_name):
 
 def compute_importances_on_impurity(column_names, model_name):
     forest = joblib.load(model_name)
-    # Bad hardcoded labels
-    # feature_names = pd.read_csv('../data/ihd_dan.csv').columns[1:]
-
-    # feature_names = [f"feature {i}" for i in range(X.shape[1])]
     start_time = time.time()
     importances = forest.feature_importances_
     std = np.std(
@@ -125,11 +109,11 @@ def main():
 
     # Training the model
     train(X_train, y_train, 'composer_model.joblib')
-    print('Done training role type.')
+    print('Done training.')
 
     # Testing the model
     acc = test(X_test, y_test, 'composer_model.joblib')
-    print(f'Role Type Accuracy: {acc}')
+    print(f'Composer Accuracy: {acc}')
 
     # Feature importance
     compute_importances_on_impurity(column_names, 'composer_model.joblib')
