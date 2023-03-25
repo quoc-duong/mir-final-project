@@ -7,6 +7,7 @@ import music21
 from music21 import *
 from music21.stream import Score, Part
 from process_data import create_filtered_pickle
+import glob
 
 
 def compute_complexity(score):
@@ -83,22 +84,21 @@ def create_complexity_df(score_list):
 
 
 def main():
-    with open('./data/filtered_mozart.pkl', 'rb') as f:
-        filtered_musicxml_mozart = pickle.load(f)
-    with open('./data/filtered_beethoven.pkl', 'rb') as f:
-        filtered_musicxml_beethoven = pickle.load(f)
+    dataset_path = './dataset_musicxml/'
+    mozart_files = glob.glob(dataset_path + 'mozart/*')
+    beethoven_files = glob.glob(dataset_path + 'beethoven/*')
 
-    print(f"There is {len(filtered_musicxml_mozart)} Mozart files")
-    print(f"There is {len(filtered_musicxml_beethoven)} Beethoven files")
+    print(f"There is {len(mozart_files)} Mozart files")
+    print(f"There is {len(beethoven_files)} Beethoven files")
 
-    df_mozart_complexity = create_complexity_df(filtered_musicxml_mozart)
-    df_beethoven_complexity = create_complexity_df(filtered_musicxml_beethoven)
+    df_mozart_complexity = create_complexity_df(mozart_files)
+    df_beethoven_complexity = create_complexity_df(beethoven_files)
     df_mozart_complexity.to_csv('./data/complexity_mozart.csv', index=True)
     df_beethoven_complexity.to_csv(
         './data/complexity_beethoven.csv', index=True)
 
-    df_mozart_pitch = get_pitch_hist_single(filtered_musicxml_mozart)
-    df_beethoven_pitch = get_pitch_hist_single(filtered_musicxml_beethoven)
+    df_mozart_pitch = get_pitch_hist_single(mozart_files)
+    df_beethoven_pitch = get_pitch_hist_single(beethoven_files)
 
     # Get all columns from both pitch histograms
     columns = list(set(df_mozart_pitch.columns).union(
