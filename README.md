@@ -1,12 +1,14 @@
 # mir-final-project
 
+Classification of Mozart and Beethoven scores with extracted features such as pitch histogram and note density using music21.
+
 Dataset retrieved from https://github.com/musescore/MuseScore/tree/30557dec4e573f0aa5e78043da1b7564da222452
 
 Metadata file `score.jsonl` retrieved from https://musescore-dataset.xmader.com/score.jsonl
 
 ## Usage
 
-### `process_data`
+### `process_data.py`
 
 Using the metadata file, we can retrieve information about instruments and the composers in the description.
 
@@ -25,7 +27,7 @@ python process_data.py <musescore_directory> --process --convert
 
 After getting the list of Mozart and Beethoven files in MusicXML format, you will find the separated `.mscz` and `.musicxml` datasets in `dataset_mscz` and `dataset_musicxml`.
 
-### `extract_features`
+### `extract_features.py`
 
 Extract features from Mozart and Beethoven MusicXML files such as pitch histogram and note density (or complexity) in csv files.
 Requires `dataset_musicxml` with subfolders `mozart` and `beethoven` containing MusicXML files.

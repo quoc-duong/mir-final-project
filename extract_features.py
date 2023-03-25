@@ -1,12 +1,10 @@
 import os
-import pickle
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 import music21
 from music21 import *
 from music21.stream import Score, Part
-from process_data import create_filtered_pickle
 import glob
 
 
@@ -93,9 +91,9 @@ def main():
 
     df_mozart_complexity = create_complexity_df(mozart_files)
     df_beethoven_complexity = create_complexity_df(beethoven_files)
-    df_mozart_complexity.to_csv('./data/complexity_mozart.csv', index=True)
+    df_mozart_complexity.to_csv('complexity_mozart.csv', index=True)
     df_beethoven_complexity.to_csv(
-        './data/complexity_beethoven.csv', index=True)
+        'complexity_beethoven.csv', index=True)
 
     df_mozart_pitch = get_pitch_hist_single(mozart_files)
     df_beethoven_pitch = get_pitch_hist_single(beethoven_files)
@@ -109,8 +107,8 @@ def main():
     df_beethoven_pitch = df_beethoven_pitch.reindex(
         columns=columns, fill_value=0)
 
-    df_mozart_pitch.to_csv('./data/pitch_mozart.csv', index=True)
-    df_beethoven_pitch.to_csv('data/pitch_beethoven.csv', index=True)
+    df_mozart_pitch.to_csv('pitch_mozart.csv', index=True)
+    df_beethoven_pitch.to_csv('pitch_beethoven.csv', index=True)
 
 
 if __name__ == '__main__':
