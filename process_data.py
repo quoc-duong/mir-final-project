@@ -9,20 +9,22 @@ from tqdm import tqdm
 import pickle
 import re
 import music21
+import shutil
 
 
 def parse_args():
     # Set up argparse
     parser = argparse.ArgumentParser(description='Annotate Musescore files')
-    parser.add_argument('dir_path',
+    parser.add_argument('--dir_path',
+                        default='../MuseScore/',
                         type=str,
                         help='Path to directory containing Musescore files')
     parser.add_argument('--metadata',
-                        default='score.jsonl',
+                        default='./data/score.jsonl',
                         type=str,
                         help='Path to metadata file')
     parser.add_argument('--csv_path',
-                        default='score_annotation.csv',
+                        default='./data/score_annotation.csv',
                         type=str,
                         help='Path to output CSV file')
     parser.add_argument('--process',
@@ -182,6 +184,42 @@ def create_filtered_pickle(filename, obj):
     return filtered_musicxml
 
 
+def create_dataset():
+    # Create .mscz dataset
+    with open('./data/mozart.pkl', 'rb') as f:
+        mozart_mscz = pickle.load(f)
+    with open('./data/beethoven.pkl', 'rb') as f:
+        beethoven_mscz = pickle.load(f)
+
+    os.makedirs('dataset_mscz', exist_ok=True)
+    mozart_dir = './dataset_mscz/mozart'
+    beethoven_dir = './dataset_mscz/beethoven'
+    os.makedirs(mozart_dir, exist_ok=True)
+    os.makedirs(beethoven_dir, exist_ok=True)
+
+    for filepath in mozart_mscz:
+        shutil.copy(filepath, mozart_dir)
+    for filepath in beethoven_mscz:
+        shutil.copy(filepath, beethoven_dir)
+
+    # Create MusicXML dataset
+    with open('./data/filtered_mozart.pkl', 'rb') as f:
+        mozart_musicxml = pickle.load(f)
+    with open('./data/filtered_beethoven.pkl', 'rb') as f:
+        beethoven_musicxml = pickle.load(f)
+
+    os.makedirs('dataset_musicxml', exist_ok=True)
+    mozart_dir = './dataset_musicxml/mozart'
+    beethoven_dir = './dataset_musicxml/beethoven'
+    os.makedirs(mozart_dir, exist_ok=True)
+    os.makedirs(beethoven_dir, exist_ok=True)
+
+    for filepath in mozart_musicxml:
+        shutil.copy(filepath, mozart_dir)
+    for filepath in beethoven_musicxml:
+        shutil.copy(filepath, beethoven_dir)
+
+
 def main():
     args = parse_args()
     if args.process:
@@ -189,28 +227,31 @@ def main():
         mozart, beethoven = filter_piano(
             file_list, args.metadata)
 
-        # Store piano-only and with piano files in pickle files
-        with open('mozart.pkl', 'wb') as f:
+        # Store Mozart and Beethoven MuseScore files list in pickle files
+        with open('./data/mozart.pkl', 'wb') as f:
             pickle.dump(mozart, f)
 
-        with open('beethoven.pkl', 'wb') as f:
+        with open('./data/beethoven.pkl', 'wb') as f:
             pickle.dump(beethoven, f)
 
+    with open('./data/mozart.pkl', 'rb') as f:
+        mozart = pickle.load(f)
+    with open('./data/beethoven.pkl', 'rb') as f:
+        beethoven = pickle.load(f)
+
     if args.convert:
-        with open('mozart.pkl', 'rb') as f:
-            mozart = pickle.load(f)
-        with open('beethoven.pkl', 'rb') as f:
-            beethoven = pickle.load(f)
-        mscz2musicxml(mozart, 'mozart.json')
-        mscz2musicxml(beethoven, 'beethoven.json')
+        mscz2musicxml(mozart, './data/mozart.json')
+        mscz2musicxml(beethoven, './data/beethoven.json')
 
     filtered_musicxml_mozart = create_filtered_pickle(
-        'filtered_mozart.pkl', mozart)
+        './data/filtered_mozart.pkl', mozart)
     filtered_musicxml_beethoven = create_filtered_pickle(
-        'filtered_beethoven.pkl', beethoven)
+        './data/filtered_beethoven.pkl', beethoven)
 
     print(f"There is {len(filtered_musicxml_mozart)} Mozart files")
     print(f"There is {len(filtered_musicxml_beethoven)} Beethoven files")
+
+    create_dataset()
 
 
 if __name__ == "__main__":
